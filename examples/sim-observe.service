@@ -1,0 +1,27 @@
+# SIM IRE observe-only drift check (systemd oneshot).
+#
+# Install:
+#   sudo cp examples/sim-observe.service examples/sim-observe.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now sim-observe.timer
+#
+# Adjust manifest path and SIM binary location for your host.
+
+[Unit]
+Description=SIM IRE observe-only drift check
+Documentation=file:///opt/k1/SIM/docs/ROADMAP.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/k1/.venv/bin/sim ire drift --manifest /opt/k1/k1_server_manifest.yaml
+# Non-zero exit when drift is present — surfaced in journal for alerting.
+# Optional metrics for node_exporter textfile collector:
+# ExecStartPost=/opt/k1/.venv/bin/sim ire metrics --manifest /opt/k1/k1_server_manifest.yaml
+SuccessExitStatus=0 1
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+# SIM IRE scheduled observation timer.
+#
+# Pairs with examples/sim-observe.service.
+
+[Unit]
+Description=SIM IRE daily observe-only drift check
+Documentation=file:///opt/k1/SIM/docs/ROADMAP.md
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target

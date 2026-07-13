@@ -1,0 +1,98 @@
+# K1 server manifest — reference template for SIM provisioning and IRE.
+#
+# Copy to your deployment root and adjust paths, users, and storage UUIDs.
+# Never store volatile Tailscale or DHCP addresses in desired configuration.
+
+server:
+  hostname: k1
+  role: production
+
+os:
+  distro: rocky
+  version: "10.2"
+
+filesystem:
+  root: /opt/k1
+
+python:
+  version: "3.12"
+  venv: /opt/k1/.venv
+
+container:
+  runtime: podman
+  quadlet: true
+
+gpu:
+  vendor: nvidia
+  install_driver: true
+  install_cuda: true
+
+services:
+  ollama:
+    enabled: true
+    port: 11434
+  open_webui:
+    enabled: true
+    port: 3000
+  grafana:
+    enabled: true
+    port: 3001
+  prometheus:
+    enabled: true
+    port: 9090
+  k1:
+    enabled: true
+    port: 8000
+
+security:
+  selinux: enforcing
+  firewall: firewalld
+
+monitoring:
+  enabled: true
+  # Optional node_exporter textfile path (default: report.directory/sim_ire.prom)
+  # prometheus_textfile: /var/lib/node_exporter/textfile_collector/sim_ire.prom
+
+requirements:
+  min_free_disk_gib: 20
+
+report:
+  directory: /opt/k1/reports
+
+inventory:
+  file: /opt/k1/state/inventory.json
+
+# Infrastructure Reconciliation Engine — desired state (intent only).
+infrastructure:
+  ssh:
+    enabled: true
+    port: 22
+    authentication: publickey
+    root_login: false
+    password_authentication: false
+    allowed_users:
+      - cybershaman
+    remote_access: tailscale
+    emergency_lan_access: true
+
+  firewall:
+    interfaces:
+      tailscale0:
+        zone: trusted
+    services:
+      ssh:
+        allowed_interfaces:
+          - tailscale0
+
+  tailscale:
+    enabled: true
+
+  storage:
+    mounts:
+      - path: /mnt/ai
+        # Obtain UUID: blkid /dev/nvme1n1p1  (or your device path)
+        # uuid: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        fstype: ext4
+        # Use btrfs only when the mount is actually btrfs (check: findmnt -n -o FSTYPE /mnt/ai)
+        required: true
+        min_free_gib: 50
