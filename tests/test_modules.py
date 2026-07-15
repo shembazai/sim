@@ -13,7 +13,16 @@ def test_run_install_module_skips_completed(tmp_path: Path):
     db_path = tmp_path / "state.db"
     sm = StateManager(db_path=db_path)
     sm.record_success("init_environment")
-    cfg = ManifestConfig.model_validate({"server": {"hostname": "k1", "role": "production"}})
+    root = tmp_path / "k1"
+    for name in STANDARD_SUBDIRS:
+        (root / name).mkdir(parents=True)
+    (root / "state" / "backups").mkdir(parents=True)
+    cfg = ManifestConfig.model_validate(
+        {
+            "server": {"hostname": "k1", "role": "production"},
+            "filesystem": {"root": str(root)},
+        }
+    )
     module = InitEnvironmentModule(cfg, dry_run=False)
 
     install_called = False

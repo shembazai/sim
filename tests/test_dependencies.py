@@ -5,7 +5,6 @@ from sim.modules.base import run_install_module
 from sim.modules.dependencies import (
     DependenciesModule,
     HostDependency,
-    command_is_ready,
     missing_packages,
     required_dependencies,
 )
@@ -24,8 +23,12 @@ def test_required_dependencies_includes_core_tools():
     assert {"ss", "dnf"}.issubset(names)
 
 
-def test_dependencies_detect_passes_when_tools_present():
+def test_dependencies_detect_passes_when_tools_present(monkeypatch):
     cfg = ManifestConfig.model_validate({"server": {"hostname": "k1", "role": "production"}})
+    monkeypatch.setattr(
+        "sim.modules.dependencies.command_is_ready",
+        lambda dep: (True, f"{dep.command} available"),
+    )
     module = DependenciesModule(cfg, dry_run=False)
     checks = module.detect()
     assert all(check.status != "failed" for check in checks)
@@ -39,7 +42,7 @@ def test_dependencies_detect_warns_on_missing_tool_in_dry_run(monkeypatch):
     def _fake_ready(dep: HostDependency):
         if dep.command == "podman":
             return False, "podman not found in PATH"
-        return command_is_ready(dep)
+        return True, f"{dep.command} available"
 
     monkeypatch.setattr("sim.modules.dependencies.command_is_ready", _fake_ready)
     checks = module.detect()
@@ -56,9 +59,10 @@ def test_dependencies_install_calls_dnf_for_missing_packages(monkeypatch):
     def _fake_ready(dep: HostDependency):
         if dep.command == "podman":
             return False, "podman not found in PATH"
-        return command_is_ready(dep)
+        return True, f"{dep.command} available"
 
     monkeypatch.setattr("sim.modules.dependencies.command_is_ready", _fake_ready)
+    monkeypatch.setattr("sim.modules.dependencies.shutil.which", lambda name: f"/usr/bin/{name}")
     module = DependenciesModule(cfg, dry_run=False, run_install=_fake_install)
     module.install()
 
@@ -95,7 +99,7 @@ def test_dependencies_dry_run_does_not_install_or_persist(tmp_path: Path, monkey
     def _fake_ready(dep: HostDependency):
         if dep.command == "podman":
             return False, "podman not found in PATH"
-        return command_is_ready(dep)
+        return True, f"{dep.command} available"
 
     monkeypatch.setattr("sim.modules.dependencies.command_is_ready", _fake_ready)
     module = DependenciesModule(cfg, dry_run=True, run_install=_fake_install)
@@ -151,10 +155,14 @@ def test_dependencies_run_install_module_records_completion(tmp_path: Path, monk
     sm.close()
 
 
-def test_dependencies_skips_when_already_completed(tmp_path: Path):
+def test_dependencies_skips_when_already_completed(tmp_path: Path, monkeypatch):
     sm = StateManager(db_path=tmp_path / "state.db")
     sm.record_success("dependencies")
     cfg = ManifestConfig.model_validate({"server": {"hostname": "k1", "role": "production"}})
+    monkeypatch.setattr(
+        "sim.modules.dependencies.command_is_ready",
+        lambda dep: (True, f"{dep.command} available"),
+    )
     module = DependenciesModule(cfg, dry_run=False)
     result = run_install_module(module, sm, dry_run=False)
 
