@@ -58,6 +58,7 @@ class FirewallObserved(BaseModel):
     active: bool = False
     interface_zones: dict[str, str] = Field(default_factory=dict)
     ssh_allowed_zones: list[str] = Field(default_factory=list)
+    ssh_services_observable: bool = False
 
     model_config = {"extra": "forbid"}
 

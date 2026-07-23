@@ -182,7 +182,7 @@ def _compare_ssh(desired: InfrastructureDesiredState, observed: ObservedState) -
                     "SSH binds to specific addresses. Avoid Tailscale or DHCP IPs "
                     "in ListenAddress — use firewall rules for access control."
                 ),
-                auto_repairable=True,
+                auto_repairable=False,
             )
         )
     if ssh_d.root_login is False and (ssh_o.permit_root_login or "").lower() not in ("no", "prohibit-password", "without-password"):
@@ -257,7 +257,7 @@ def _compare_firewall(desired: InfrastructureDesiredState, observed: ObservedSta
                 )
             )
     ssh_access = desired.firewall.services.get("ssh")
-    if ssh_access:
+    if ssh_access and observed.firewall.ssh_services_observable:
         for iface in ssh_access.allowed_interfaces:
             zone = observed.firewall.interface_zones.get(iface)
             if zone and zone not in observed.firewall.ssh_allowed_zones and "ssh" not in observed.firewall.ssh_allowed_zones:

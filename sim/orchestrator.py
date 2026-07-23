@@ -368,11 +368,16 @@ def repair_target(
     cfg: ManifestConfig,
     state: StateManager,
     *,
-    dry_run: bool = False,
+    dry_run: bool = True,
+    require_ssh_path: bool = True,
     transaction_db: Path = Path("/opt/k1/state/ire_transactions.db"),
     backup_dir: Path = Path("/opt/k1/state/backups"),
 ) -> RepairResult:
-    """Rollback and re-apply a single install or IRE module."""
+    """Rollback and re-apply a single install or IRE module.
+
+    Dry-run by default (SIM constitution §3.3). SSH panic-safe gate stays on
+    unless ``require_ssh_path=False`` is explicitly requested.
+    """
     if target in IRE_REPAIR_TARGETS:
         engine = _ire_engine_for_target(
             cfg,
@@ -383,7 +388,7 @@ def repair_target(
         if engine is None:
             return RepairResult(target, "ire", False, f"Unknown IRE target {target!r}")
         if dry_run:
-            reconcile = engine.reconcile(dry_run=True)
+            reconcile = engine.reconcile(dry_run=True, require_ssh_path=require_ssh_path)
             return RepairResult(
                 target=target,
                 kind="ire",
@@ -393,7 +398,7 @@ def repair_target(
             )
         for module in engine.modules:
             module.rollback(backup_dir)
-        reconcile = engine.reconcile(dry_run=False, require_ssh_path=False)
+        reconcile = engine.reconcile(dry_run=False, require_ssh_path=require_ssh_path)
         return RepairResult(
             target=target,
             kind="ire",

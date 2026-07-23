@@ -33,20 +33,34 @@ from sim.ire.models import StorageMountObserved  # re-export
 
 
 def _parse_sshd_config(path: Path = Path("/etc/ssh/sshd_config")) -> dict[str, str]:
+    """Parse sshd effective settings from main config plus included drop-ins.
+
+    SIM writes managed settings to ``sshd_config.d/``; observing only the main
+    file misses AllowUsers / PasswordAuthentication and breaks reconcile verify.
+    """
     values: dict[str, str] = {}
-    if not path.exists():
-        return values
-    try:
-        content = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return values
-    for raw in content.splitlines():
-        line = raw.split("#", 1)[0].strip()
-        if not line or line.lower().startswith("match"):
+    paths: list[Path] = [path]
+    drop_in_dir = path.parent / "sshd_config.d"
+    if drop_in_dir.is_dir():
+        paths.extend(sorted(drop_in_dir.glob("*.conf")))
+
+    for cfg_path in paths:
+        if not cfg_path.exists():
             continue
-        parts = line.split(None, 1)
-        if len(parts) == 2:
-            values[parts[0].lower()] = parts[1].strip()
+        try:
+            content = cfg_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for raw in content.splitlines():
+            line = raw.split("#", 1)[0].strip()
+            if not line or line.lower().startswith("match"):
+                continue
+            if line.lower().startswith("include"):
+                continue
+            parts = line.split(None, 1)
+            if len(parts) == 2:
+                # Later drop-ins override earlier keys (sshd last-wins for most).
+                values[parts[0].lower()] = parts[1].strip()
     return values
 
 
@@ -157,15 +171,23 @@ def _observe_firewall() -> FirewallObserved:
     active = ok and output.strip() == "active"
     interface_zones: dict[str, str] = {}
     ssh_zones: list[str] = []
+    ssh_services_observable = False
     if not active:
         return FirewallObserved(active=False)
     ok, output = run_command(["firewall-cmd", "--get-active-zones"])
     if ok:
         interface_zones = _parse_firewall_active_zones(output)
     ok, output = run_command(["firewall-cmd", "--list-services", "--zone=trusted"])
-    if ok and "ssh" in output.split():
-        ssh_zones.append("trusted")
-    return FirewallObserved(active=active, interface_zones=interface_zones, ssh_allowed_zones=ssh_zones)
+    if ok:
+        ssh_services_observable = True
+        if "ssh" in output.split():
+            ssh_zones.append("trusted")
+    return FirewallObserved(
+        active=active,
+        interface_zones=interface_zones,
+        ssh_allowed_zones=ssh_zones,
+        ssh_services_observable=ssh_services_observable,
+    )
 
 
 def _observe_tailscale() -> TailscaleObserved:

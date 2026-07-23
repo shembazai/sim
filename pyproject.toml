@@ -1,12 +1,12 @@
 [project]
 name = "sim"
 version = "0.1.0"
-description = "Shembazai Infrastructure Manager - deterministic, idempotent provisioning for Rocky Linux 10 hosts"
+description = "Shembazaï Infrastructure Manager - deterministic, idempotent provisioning for Rocky Linux 10 hosts"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 authors = [ { name = "Shembazaï" } ]
-urls = { Repository = "https://github.com/Shembazai/sim", Documentation = "https://github.com/Shembazai/sim#readme" }
+urls = { Repository = "https://github.com/shembazai/sim", Documentation = "https://github.com/shembazai/sim#readme" }
 dependencies = [
     "typer>=0.15",
     "rich>=13.7",

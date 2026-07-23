@@ -1,0 +1,156 @@
+# SIM Constitution v1.0
+
+Authority: subordinate to `K1/K1_constitution.txt`.
+If this file conflicts with the K1 constitution, the K1 constitution wins.
+
+## 1. Purpose
+
+SIM (Shembazaï Infrastructure Manager) is the deterministic infrastructure
+control plane for K1. It provisions hosts and maintains declared desired state
+through the Infrastructure Reconciliation Engine (IRE).
+
+SIM exists so K1 can run on machines that remain:
+
+- reproducible
+- auditable
+- recoverable
+- under operator sovereignty
+
+SIM is not a generic cloud orchestrator and not an autonomous "self-healing"
+system that may destroy data to force convergence.
+
+## 2. Relationship to K1 and Peer Subsystems
+
+| Component | Declared state domain |
+| --- | --- |
+| SIM | Host infrastructure (packages, services, SSH, firewall, storage observation, Tailscale identity) |
+| EON | Personal finance profile and journal |
+| K1 agents | Cognitive tasks, tools, memory |
+
+Long-term K1 control-plane picture (vision, not a build order): SIM alongside
+OASIS (knowledge), EON (finance), and future Xylem (agent transport). Every
+subsystem remains replaceable; every change remains explainable years later.
+
+Canonical package home: `K1/SIM/`.
+
+## 3. Governing Principles
+
+Merged from SIM operational doctrine and `/AI` infrastructure sovereignty /
+structural-engineering notes.
+
+### 3.1 Deterministic and idempotent
+
+Same declared input must produce the same result. Re-running a successful
+operation must be safe.
+
+### 3.2 Desired vs observed
+
+- Manifest `infrastructure:` holds **intent**
+- `sim ire observe` discovers **runtime**
+- Drift is a first-class signal, not an afterthought
+
+### 3.3 Human-in-the-loop for critical mutation
+
+Dry-run is the default for reconcile **and** repair. Applying repairable drift
+or repair requires explicit operator action (`--apply` or equivalent).
+Convenience must not outvote recoverability.
+
+SSH panic-safe preflight remains enabled for repair unless the operator passes
+an explicit override (`--allow-blocked-ssh`).
+
+### 3.4 Panic-safe before change
+
+Preflight must block mutation when recovery paths are unavailable (required
+mounts missing, SSH recovery path unsafe, etc.). Prefer **BLOCKED** over
+blind repair.
+
+### 3.5 Storage: observe, do not wipe
+
+Missing or unhealthy mounts produce warnings and evidence. Automatic
+destructive repair (`mkfs`, `wipefs`, mount repair that risks data) is
+forbidden. Incident lesson: unmounted ? wiped.
+
+### 3.6 No volatile identity in desired state
+
+Do not store Tailscale/DHCP addresses as desired SSH bind targets. Identity
+drift is observed; desired config stays stable across IP churn.
+
+### 3.7 Evidence over tribal knowledge
+
+Every meaningful IRE transaction produces durable evidence (TX id, validation,
+rollback availability, JSON/Markdown export). An operator must be able to
+explain a change without reading source code.
+
+### 3.8 Least privilege and sovereignty
+
+Prefer:
+
+- system-native packages over uncontrolled installers
+- signed / traced provenance over `curl | bash` habits
+- minimal attack surface over convenience defaults
+- explicit confirmation before package removal or service disable
+
+Treat uncontrolled drift as a degradation of sovereignty.
+
+### 3.9 Fail closed under uncertainty
+
+When safety checks are inconclusive, do not mutate. Escalate with a specific
+reason.
+
+### 3.10 Local-first
+
+SIM runs on the host it manages. Core reconciliation must not require a remote
+control plane.
+
+## 4. Architecture Model
+
+```
+Manifest (desired)          Runtime (observed)
+       ?                            ?
+       ??????????????????????????????
+                  ?
+         IRE: drift ? plan ? safety ? execute ? verify
+                  ?
+                  ?
+         Transaction evidence + phase reports
+```
+
+Provisioning phases (Detect ? Validate ? Install ? Verify ? Complete) use the
+same lifecycle discipline as IRE modules.
+
+## 5. Operator Contract
+
+SIM shall provide:
+
+- health / drift visibility suitable for daily operations
+- structured logs and phase reports
+- rollback when a module supports it
+- Prometheus textfile metrics when configured
+
+SIM shall not:
+
+- silently widen firewall exposure
+- bind SSH to ephemeral VPN addresses as desired state
+- auto-rotate Tailscale auth keys without human approval
+- present Rich-colored output on machine-readable JSON channels (`typer.echo`)
+
+## 6. Documentation Map
+
+| Document | Role |
+| --- | --- |
+| This file | Foundation / doctrine |
+| `README.md` | Operator handbook |
+| `docs/ROADMAP.md` | Completion record and decision log |
+| `examples/k1_server_manifest.yaml` | Reference desired state |
+
+## 7. Success Criteria
+
+SIM succeeds when:
+
+- a Rocky Linux 10+ host can be provisioned and kept near declared state
+- drift is detectable without tribal knowledge
+- unsafe conditions block mutation
+- evidence exists for applied changes
+- K1 can rely on SIM as its infrastructure floor without improvisation
+
+End of SIM constitution.

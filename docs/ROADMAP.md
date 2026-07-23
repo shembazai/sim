@@ -1,5 +1,8 @@
 # SIM Continuation Roadmap — Infrastructure Reconciliation Engine
 
+Foundation: [SIM_constitution.txt](../SIM_constitution.txt)
+(parent: [K1_constitution.txt](../../K1_constitution.txt)).
+
 This document is the authoritative continuation plan after the IRE foundation.
 It aligns SIM with K1_OS control-plane requirements and the operational lessons
 from the Tailscale/SSH/firewalld incident.
@@ -280,6 +283,9 @@ SIM evolves from *"run scripts that configure a machine"* to *"maintain
 declared infrastructure state with evidence."* That positions it as the
 deterministic control plane K1_OS depends on — alongside OASIS (knowledge),
 EON (finance), and future Xylem agent transport.
+
+EON now lives at `K1/EON/` with `eon health`, `eon self-test`, and FinanceAgent
+integration. See [EON/docs/ROADMAP.md](../../EON/docs/ROADMAP.md).
 
 Every subsystem remains replaceable. Every change remains explainable ten
 years from now.

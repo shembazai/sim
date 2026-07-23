@@ -81,6 +81,7 @@ def test_chaos_volatile_ssh_bind_is_critical_drift():
     bind = next(d for d in drift if d.field == "bind_addresses")
     assert bind.severity == "critical"
     assert "Tailscale" in bind.message
+    assert bind.auto_repairable is False
 
 
 def test_chaos_firewall_zone_drift_plans_repairable_step():

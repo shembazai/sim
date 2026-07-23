@@ -54,13 +54,6 @@ ire_app = typer.Typer(
 )
 app.add_typer(ire_app)
 
-k1_app = typer.Typer(
-    name="k1",
-    help="K1 agent runtime Alpha preflight and integration checks.",
-    no_args_is_help=True,
-)
-app.add_typer(k1_app)
-
 
 def _version_callback(value: bool) -> None:
     if value:
@@ -736,12 +729,28 @@ def repair(
         "--tx-db",
         help="IRE transaction evidence database.",
     ),
+    apply: bool = typer.Option(
+        False,
+        "--apply",
+        help="Apply repair (default is plan-only / dry-run).",
+    ),
+    allow_blocked_ssh: bool = typer.Option(
+        False,
+        "--allow-blocked-ssh",
+        help="Allow IRE repair when SSH recovery path safety would otherwise block.",
+    ),
 ) -> None:
-    """Rollback and re-apply a single install or IRE module."""
+    """Rollback and re-apply a single install or IRE module.
+
+    Dry-run by default (SIM constitution §3.3). Pass ``--apply`` to mutate.
+    """
     from sim.orchestrator import known_repair_targets, repair_target
 
     cfg = _load_manifest(manifest)
-    dry_run = bool((ctx.obj or {}).get("dry_run", False))
+    # Explicit --apply wins; otherwise honor global --dry-run / default dry-run.
+    dry_run = not apply
+    if apply is False and bool((ctx.obj or {}).get("dry_run", False)):
+        dry_run = True
     available = known_repair_targets(cfg)
     if target not in available:
         console.print(
@@ -759,6 +768,7 @@ def repair(
                     state,
                     dry_run=dry_run,
                     transaction_db=tx_db,
+                    require_ssh_path=not allow_blocked_ssh,
                 )
     except StateLockedError as exc:
         console.print(f"[red]State lock error:[/red] {exc}")
@@ -766,6 +776,8 @@ def repair(
 
     color = "green" if result.passed else "red"
     console.print(f"[{color}]{result.message}[/{color}]")
+    if dry_run:
+        console.print("[yellow]Dry-run enabled:[/yellow] no host changes were applied. Re-run with --apply.")
     if result.module_result is not None:
         _print_check_results(result.module_result)
     if result.reconciliation is not None and result.reconciliation.plan.drift:
@@ -1087,7 +1099,8 @@ def ire_observe(
         output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         console.print(f"Observed state written to {output}")
     else:
-        console.print(json.dumps(payload, indent=2))
+        # Machine-readable channel: typer.echo (SIM constitution §5)
+        typer.echo(json.dumps(payload, indent=2))
     raise typer.Exit(code=0)
 
 
@@ -1242,42 +1255,6 @@ def ire_metrics(
     path = write_prometheus_textfile(content, target)
     console.print(f"Prometheus metrics: {path}")
     raise typer.Exit(code=0 if health.passed and safety.passed else 1)
-
-
-@k1_app.command("preflight")
-def k1_preflight(
-    k1_root: Path = typer.Option(
-        None,
-        "--k1-root",
-        help="Path to K1 repository (default: parent of SIM).",
-    ),
-    as_json: bool = typer.Option(
-        False,
-        "--json",
-        help="Emit machine-readable JSON to stdout.",
-    ),
-    overlay: bool = typer.Option(
-        False,
-        "--overlay",
-        help="Run overlay pytest verification when live tree is not writable.",
-    ),
-) -> None:
-    """Run K1 Alpha Part I preflight checks (read-only)."""
-    from sim.k1.preflight import default_k1_root, run_k1_preflight
-
-    report = run_k1_preflight(
-        k1_root=k1_root or default_k1_root(),
-        run_overlay=overlay,
-    )
-    if as_json:
-        typer.echo(json.dumps(report.to_dict(), indent=2))
-    else:
-        console.print(f"[bold]K1 preflight[/bold] ({report.k1_root})")
-        for check in report.checks:
-            color = "green" if check.passed else "red" if check.critical else "yellow"
-            console.print(f"  [{color}]{check.name}: {check.detail}[/{color}]")
-        console.print(f"[bold]Result:[/bold] {'PASS' if report.passed else 'FAIL'}")
-    raise typer.Exit(code=0 if report.passed else 1)
 
 
 if __name__ == "__main__":

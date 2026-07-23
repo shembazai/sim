@@ -1,13 +1,14 @@
-# SIM (Shembazaï Infrastructure Manager)
-
-> **Lifecycle:** Beta · **Role:** Infrastructure · **Audience:** Operators maintaining Shembazaï hosts
+# SIM (Shembazai Infrastructure Manager)
 
 SIM is a deterministic, idempotent infrastructure manager for Rocky Linux 10+
-hosts. It provisions internal platform infrastructure and maintains declared desired state
+hosts. It provisions K1 infrastructure and maintains declared desired state
 via the **Infrastructure Reconciliation Engine (IRE)** — observation, drift
 detection, transactional change, rollback, and evidence.
 
-**Verification (July 2026):** 180 tests passing. See [docs/ROADMAP.md](docs/ROADMAP.md).
+**Status (July 2026):** Complete — 180 tests passing. See [docs/ROADMAP.md](docs/ROADMAP.md).
+
+**Doctrine:** [SIM_constitution.txt](SIM_constitution.txt) (subordinate to
+[K1_constitution.txt](../K1_constitution.txt)).
 
 ## Table of Contents
 

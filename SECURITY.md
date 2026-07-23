@@ -6,7 +6,7 @@ Security before convenience. SIM mutates host infrastructure — run only on sys
 
 ## Reporting a vulnerability
 
-**Preferred:** [GitHub Security Advisories](https://github.com/Shembazai/sim/security/advisories/new) (private disclosure).
+**Preferred:** [GitHub Security Advisories](https://github.com/shembazai/sim/security/advisories/new) (private disclosure).
 
 **Alternative:** shembazai@pm.me — include steps to reproduce, affected version, and impact assessment.
 
